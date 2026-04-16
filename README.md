@@ -53,36 +53,34 @@ RAG_claude/
 
 ## ⚙️ Setup Instructions
 
-1. Clone the Repository
-   Bash
-   git clone [https://github.com/your-username/docchat.git](https://github.com/your-username/docchat.git)
-   cd docchat
-2. Install Dependencies
-   Bash
+1. **Clone the Repository**
+   
+2. **Install Dependencies**
+   ```text
    pip install -r requirements.txt
-3. Setup Environment Variables
-   Create a .env file in the root directory:
+   ```
+   
+3. **Setup Environment Variables**
+   * Create a .env file in the root directory:
+   * cp .env.example .env
+   * Add your Gemini API key to the .env file:
+   * Code snippet
+     ```text
+     GOOGLE_API_KEY=your_api_key_here
+     ```
 
-cp .env.example .env
-Add your Gemini API key to the .env file:
+4. **Process Your Data**
 
-Code snippet
-GOOGLE_API_KEY=your_api_key_here
+* Place your files (PDFs or TXT) inside the data/ folder, then run the ingestion script to build the vector database:
 
----
-
-4. Process Your Data
-
-Place your files (PDFs or TXT) inside the data/ folder, then run the ingestion script to build the vector database:
-
-Bash
+```text
 python ingestion.py
+```
 
----
-
-5. Launch the App
-   Bash
+5. **Launch the App**
+   ```text
    streamlit run app.py
+   ```
 
 ---
 
