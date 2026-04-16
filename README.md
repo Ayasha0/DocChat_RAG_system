@@ -34,20 +34,21 @@ Built using **LangChain, FAISS, and Gemini**, this project transforms PDFs, text
 
 ## 📁 Project Structure
 
----
-
-docchat/
-├── app.py # Streamlit UI
-├── rag_pipeline.py # RAG pipeline (retrieval + generation)
-├── ingestion.py # Data ingestion logic
-├── prompts.py # Prompt templates
-├── config.py # Configurations
-├── data/ # Input documents (PDF, TXT)
-├── vectorstore/ # FAISS DB (generated locally)
-├── images/ # Project UI screenshots
-├── .env.example # Environment variables template
-├── .gitignore
-└── README.md
+```text
+RAG_claude/
+├── app.py              # Streamlit UI
+├── rag_pipeline.py     # RAG pipeline logic
+├── ingestion.py        # Data processing script
+├── main.py             # Entry point
+├── prompts.py          # LLM prompt templates
+├── config.py           # Configuration settings
+├── data/               # Input source files
+├── document/           # Document storage
+├── vector_store/       # FAISS database (local)
+├── images/             # UI screenshots
+├── myenv/              # Virtual environment (ignored by git)
+├── .env                # API Keys (private)
+└── requirements.txt    # Project dependencies
 
 ---
 
