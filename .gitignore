@@ -1,0 +1,23 @@
+# Environments
+myenv/
+.env
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data & Vector Store
+# It's usually best to keep data and built indices out of Git
+vector_store/
+vectorstore/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
