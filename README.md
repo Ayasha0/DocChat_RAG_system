@@ -49,8 +49,7 @@ RAG_claude/
 ├── myenv/              # Virtual environment (ignored by git)
 ├── .env                # API Keys (private)
 └── requirements.txt    # Project dependencies
-
----
+```
 
 ## ⚙️ Setup Instructions
 
