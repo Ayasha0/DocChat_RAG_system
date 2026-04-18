@@ -1,0 +1,264 @@
+🧠 Big Picture First (so you don’t get lost)
+
+Your function:
+
+build_rag_chain(retriever, llm)
+
+Builds a pipeline like this:
+
+User Question
+   ↓
+Rewrite question (using chat history)
+   ↓
+Retrieve relevant documents
+   ↓
+Send docs + question to LLM
+   ↓
+Generate answer
+🎬 Now let’s do a REAL DRY RUN (step-by-step)
+👤 User asks:
+
+“What are its eligibility criteria?”
+
+Chat history:
+
+[
+  Human: "Tell me about the PM Internship Scheme",
+  AI: "It is a government initiative..."
+]
+🔹 STEP 1 — Rephrase Prompt
+rephrase_prompt = ChatPromptTemplate.from_messages([
+    ("system", "Given the chat history..."),
+    MessagesPlaceholder("chat_history"),
+    ("human", "{input}")
+])
+💡 What this creates
+
+A template, not execution yet.
+
+🔥 When invoked, it becomes:
+SYSTEM:
+Given the chat history and the latest user question,
+reformulate it into a standalone question.
+
+CHAT HISTORY:
+User: Tell me about the PM Internship Scheme
+AI: It is a government initiative...
+
+USER:
+What are its eligibility criteria?
+✅ Output from LLM (important!)
+"What are the eligibility criteria of the PM Internship Scheme?"
+
+👉 This is CRITICAL — ambiguity removed.
+
+🔹 STEP 2 — History-aware retriever
+history_aware_retriever = create_history_aware_retriever(
+    llm,
+    retriever,
+    rephrase_prompt
+)
+🧠 What this REALLY does internally
+
+It creates a pipeline:
+
+(input + chat_history)
+    ↓
+rephrase_prompt
+    ↓
+LLM → standalone question
+    ↓
+retriever.search()
+🔥 Dry run:
+
+Input:
+
+{
+  "input": "What are its eligibility criteria?",
+  "chat_history": [...]
+}
+
+After rewrite:
+
+"What are the eligibility criteria of PM Internship Scheme?"
+
+Retriever now searches vector DB:
+
+Top 4 chunks returned:
+- Page 3: eligibility age 18–25
+- Page 4: education requirement
+- Page 7: stipend details
+- Page 2: overview
+🔹 STEP 3 — QA Chain
+qa_chain = create_stuff_documents_chain(
+    llm,
+    RAG_PROMPT,
+)
+🧠 What this does
+
+It creates a chain:
+
+(docs + question)
+    ↓
+Insert into prompt
+    ↓
+LLM generates answer
+🔥 Example prompt sent to LLM:
+SYSTEM:
+Answer ONLY from the provided context.
+
+CONTEXT:
+[Doc1: eligibility age 18–25]
+[Doc2: education requirement]
+[Doc3: stipend details]
+
+QUESTION:
+What are the eligibility criteria of PM Internship Scheme?
+✅ Output:
+Eligibility criteria include:
+- Age between 18–25
+- Must be enrolled in college
+🔹 STEP 4 — Full RAG Chain
+rag_chain = create_retrieval_chain(
+    history_aware_retriever,
+    qa_chain
+)
+🧠 What this combines
+User Input
+   ↓
+Rewriter (LLM)
+   ↓
+Retriever (FAISS)
+   ↓
+QA Chain (LLM)
+🔥 Output format:
+{
+  "answer": "...",
+  "context": [Document1, Document2, ...]
+}
+🔹 STEP 5 — THE MOST IMPORTANT LINE
+final_chain = RunnableLambda(
+    lambda x: {
+        "input": x["question"],
+        "question": x["question"],
+        "chat_history": x["chat_history"],
+    }
+) | rag_chain
+❗ WHY THIS EXISTS (this is where most people fail)
+
+Your rag_chain expects:
+
+{
+  "input": "...",
+  "chat_history": [...]
+}
+
+BUT your app sends:
+
+{
+  "question": "...",
+  "chat_history": [...]
+}
+🔥 So this line FIXES the mismatch
+Input:
+{
+  "question": "What are eligibility criteria?",
+  "chat_history": [...]
+}
+After lambda:
+{
+  "input": "What are eligibility criteria?",
+  "question": "What are eligibility criteria?",
+  "chat_history": [...]
+}
+Why both?
+Key	Used by
+input	retriever
+question	prompt (RAG_PROMPT)
+🔗 What does | rag_chain mean?
+
+This is LCEL operator:
+
+A | B  = output of A → input of B
+
+So:
+
+lambda → rag_chain
+🧠 FINAL EXECUTION FLOW (FULL PIPELINE)
+
+When you call:
+
+self.chain.invoke({
+    "question": "What are eligibility criteria?",
+    "chat_history": [...]
+})
+🔥 Actual execution:
+1. RunnableLambda runs
+
+Transforms input
+
+↓
+
+2. History-aware retriever
+rewrites question
+retrieves docs
+
+↓
+
+3. QA chain
+injects docs into prompt
+LLM answers
+
+↓
+
+4. Output returned
+{
+  "answer": "...",
+  "context": [docs]
+}
+📦 Now your ask() method
+result = self.chain.invoke(...)
+Then:
+answer = result["answer"]
+source_docs = result.get("context", [])
+You extract sources:
+f"📄 {doc.metadata.get('source')} — page {doc.metadata.get('page')}"
+🧠 Memory part (VERY important)
+self.chat_history.append(HumanMessage(content=question))
+self.chat_history.append(AIMessage(content=answer))
+Why?
+
+So next query:
+
+“What about stipend?”
+
+Becomes:
+
+"What is the stipend of PM Internship Scheme?"
+⚠️ Critical Insight (this makes you advanced)
+Old way:
+ConversationalRetrievalChain
+
+👉 Black box
+
+Your way (LCEL):
+
+You control:
+
+rewriting
+retrieval
+prompting
+formatting
+
+👉 This is production-level design
+
+🧪 If you want to REALLY lock this in memory
+
+Try this mental model:
+
+🧑‍🏫 Think of it like a team:
+Component	Role
+Rewriter LLM	Fix unclear questions
+Retriever	Finds documents
+QA LLM	Writes answer
+Lambda	Translator between components
