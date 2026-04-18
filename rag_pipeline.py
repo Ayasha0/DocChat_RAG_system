@@ -108,19 +108,62 @@ def build_rag_chain(retriever, llm):
         ("human", "{input}")
     ])
 
+    """
+    WHAT THE BELOW PIPELINE DOES: 
+    It creates a pipeline:
+
+    (input + chat_history)
+        ↓
+    rephrase_prompt
+        ↓
+    LLM → standalone question
+        ↓
+    retriever.search()
+
+    OUTPUT will be: top 4 relevant chunks
+    """
+
     history_aware_retriever = create_history_aware_retriever(
         llm,
         retriever,
-        rephrase_prompt
+        rephrase_prompt #(input + chat history)
     )
 
     # ─── 2. Answer generation chain ─────────────────────────────────────
+    """
+    It creates a chain:
+
+    (docs + question)
+        ↓
+    Insert into prompt
+        ↓
+    LLM generates answer
+
+    OUTPUT : is the answer for the prompt
+    """
     qa_chain = create_stuff_documents_chain(
         llm,
         RAG_PROMPT,   # your existing prompt (KEEP THIS unchanged)
     )
 
     # ─── 3. Full retrieval + generation pipeline ────────────────────────
+    """
+    User Input
+       ↓
+    Rewriter (LLM)       -> reformualte
+       ↓
+    Retriever (FAISS)    -> top 4 chunks
+       ↓
+    QA Chain (LLM)       -> answer for prompt
+
+
+    for example: 
+    {
+      "answer": "...",
+      "context": [Document1, Document2, ...]
+    }
+    """
+    
     rag_chain = create_retrieval_chain(
         history_aware_retriever,
         qa_chain
@@ -137,24 +180,35 @@ def build_rag_chain(retriever, llm):
 
     return final_chain
 
-# def build_rag_chain(retriever, llm):
-#     """
-#     Assemble the full RAG chain with memory.
-    
-#     ConversationalRetrievalChain does THREE things automatically:
-#     1. Reformulates the question using chat history
-#     2. Retrieves relevant chunks
-#     3. Sends everything to the LLM
-#     """
-#     chain = ConversationalRetrievalChain.from_llm(
-#         llm=llm,
-#         retriever=retriever,
-#         condense_question_prompt=REFORMULATION_PROMPT,
-#         combine_docs_chain_kwargs={"prompt": RAG_PROMPT},
-#         return_source_documents=True,   # We want to show citations
-#         verbose=False,
-#     )
-#     return chain
+"""
+When you call:
+
+self.chain.invoke({
+    "question": "What are eligibility criteria?",
+    "chat_history": [...]
+})
+
+Actual execution:
+1. RunnableLambda runs
+Transforms input
+↓
+
+2. History-aware retriever
+rewrites question
+retrieves docs
+↓
+
+3. QA chain
+injects docs into prompt
+LLM answers
+↓
+
+4. Output returned
+{
+  "answer": "...",
+  "context": [docs]
+}
+"""
 
 
 class RAGPipeline:
